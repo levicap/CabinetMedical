@@ -6,7 +6,7 @@ function Reserver() {
   return (
     <DefaultLayout>
         <div>
-      <h1 className="mb-2.5 ml-2.5 font-medium text-2xl text-black">Reserver Rendez-vous</h1>
+      <h1 className="mb-2.5 ml-2.5 font-medium text-2xl text-black dark:text-white">Reserver Rendez-vous</h1>
       
       <Rv/>
 

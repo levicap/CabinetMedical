@@ -1,8 +1,16 @@
 import DefaultLayout from "@/components/Layouts/DefaultLayout";
 import PrescriptionsDemo from "@/components/tableso/table3";
 import DiagnosticsDemo from "@/components/tableso/table4";
+import { auth } from "@/auth";
+import { redirect } from "next/navigation";
 
-function Info() {
+
+async function Info() {
+  const session=await auth()
+  if (!session) {
+    redirect('/auth')
+  }
+ 
   return (
     <DefaultLayout>
         <div>

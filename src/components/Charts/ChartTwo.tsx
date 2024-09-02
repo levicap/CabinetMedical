@@ -1,7 +1,7 @@
 "use client";
 
 import { ApexOptions } from "apexcharts";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 
 const ReactApexChart = dynamic(() => import("react-apexcharts"), {
@@ -22,7 +22,6 @@ const options: ApexOptions = {
       enabled: false,
     },
   },
-
   responsive: [
     {
       breakpoint: 1536,
@@ -48,9 +47,8 @@ const options: ApexOptions = {
   dataLabels: {
     enabled: false,
   },
-
   xaxis: {
-    categories: ["M", "T", "W", "T", "F", "S", "S"],
+    categories: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"], // Match with the default data keys
   },
   legend: {
     position: "top",
@@ -58,7 +56,6 @@ const options: ApexOptions = {
     fontFamily: "Satoshi",
     fontWeight: 500,
     fontSize: "14px",
-
     markers: {
       radius: 99,
     },
@@ -68,24 +65,50 @@ const options: ApexOptions = {
   },
 };
 
-interface ChartTwoState {
-  series: {
-    name: string;
-    data: number[];
-  }[];
-}
-
 const ChartTwo: React.FC = () => {
-  const series = [
-    {
-      name: "Rendez vous",
-      data: [44, 55, 41, 67, 22, 43, 65],
-    },
-    {
-      name: "Consultation ",
-      data: [13, 23, 20, 8, 13, 27, 15],
-    },
-  ];
+  const [series, setSeries] = useState([
+    { name: "Rendez vous", data: [0, 0, 0, 0, 0, 0, 0] },
+    { name: "Consultation", data: [0, 0, 0, 0, 0, 0, 0] },
+  ]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await fetch("/api/week?weekStart=2024-08-24");
+        if (!response.ok) throw new Error("Failed to fetch data");
+        const data = await response.json();
+        console.log("Weekly data:", data);
+
+        // Define default values for each day of the week
+        const defaultData = {
+          "Monday": 0,
+          "Tuesday": 0,
+          "Wednesday": 0,
+          "Thursday": 0,
+          "Friday": 0,
+          "Saturday": 0,
+          "Sunday": 0
+        };
+
+        // Transform data into arrays
+        const rendezvousData = Object.keys(defaultData).map(day => data.rendezvousByDay[day] || 0);
+        const consultationData = Object.keys(defaultData).map(day => data.consultationByDay[day] || 0);
+
+        setSeries([
+          { name: "Rendez vous", data: rendezvousData },
+          { name: "Consultation", data: consultationData },
+        ]);
+      } catch (error) {
+        console.error("Error fetching weekly data:", error);
+        setSeries([
+          { name: "Rendez vous", data: [0, 0, 0, 0, 0, 0, 0] },
+          { name: "Consultation", data: [0, 0, 0, 0, 0, 0, 0] },
+        ]);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   return (
     <div className="col-span-12 rounded-sm border border-stroke bg-white p-7.5 shadow-default dark:border-strokedark dark:bg-boxdark xl:col-span-4">

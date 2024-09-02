@@ -1,214 +1,387 @@
 "use client";
-import React, { useState, useEffect, useRef } from 'react';
-import { classNames } from 'primereact/utils';
-import { DataTable } from 'primereact/datatable';
-import { Toast } from 'primereact/toast';
-import { Button } from 'primereact/button';
-import { InputText } from 'primereact/inputtext';
-import { Dialog } from 'primereact/dialog';
-import { Column } from 'primereact/column';
-import { Toolbar } from 'primereact/toolbar';
-import { DiagnosisService } from './data3';
-import 'primereact/resources/themes/saga-blue/theme.css';
-import 'primereact/resources/primereact.min.css';
-import 'primeicons/primeicons.css';
+import React, { useState, useEffect, useRef } from "react";
+import { classNames } from "primereact/utils";
+import { DataTable } from "primereact/datatable";
+import { Column } from "primereact/column";
+import { Toast } from "primereact/toast";
+import { Button } from "primereact/button";
+import { Toolbar } from "primereact/toolbar";
+import { InputText } from "primereact/inputtext";
+import { InputTextarea } from "primereact/inputtextarea";
+import { Dialog } from "primereact/dialog";
+import "./style.css";
+import "primereact/resources/themes/saga-blue/theme.css";
+import "primereact/resources/primereact.min.css";
+import "primeicons/primeicons.css";
+import { z } from 'zod';
 
-export default function DiagnosisTable() {
-    let emptyDiagnosis = {
+export default function ConsultationsDemo() {
+    const emptyConsultation = {
         id: null,
-        patientName: '',
-        date: '',
-        diagnosis: '',
-        notes: ''
+        nomPatient: "",
+        prenomPatient: "",
+        date: "",
+        diagnostic: "",
+        notes: "",
+        medication: "",
+        instructions: ""
     };
 
-    const [diagnoses, setDiagnoses] = useState(null);
-    const [diagnosisDialog, setDiagnosisDialog] = useState(false);
-    const [deleteDiagnosisDialog, setDeleteDiagnosisDialog] = useState(false);
-    const [diagnosis, setDiagnosis] = useState(emptyDiagnosis);
-    const [globalFilter, setGlobalFilter] = useState(null);
+    const consultationSchema = z.object({
+        nomPatient: z.string().min(1, "Nom Patient is required"),
+        prenomPatient: z.string().min(1, "Prenom Patient is required"),
+        date: z.string().min(1, "Date is required"),
+        diagnostic: z.string().optional(),
+        notes: z.string().optional(),
+        medication: z.string().optional(),
+        instructions: z.string().optional()
+    });
+
+    const [consultations, setConsultations] = useState([]);
+    const [consultationDialog, setConsultationDialog] = useState(false);
+    const [deleteConsultationDialog, setDeleteConsultationDialog] = useState(false);
+    const [deleteConsultationsDialog, setDeleteConsultationsDialog] = useState(false);
+    const [consultation, setConsultation] = useState(emptyConsultation);
+    const [selectedConsultations, setSelectedConsultations] = useState([]);
     const [submitted, setSubmitted] = useState(false);
+    const [globalFilter, setGlobalFilter] = useState("");
     const toast = useRef(null);
     const dt = useRef(null);
+    const [validationErrors, setValidationErrors] = useState({});
 
     useEffect(() => {
-        DiagnosisService.getDiagnosis().then((data) => setDiagnoses(data));
+        fetchConsultations();
     }, []);
+    
+    const fetchConsultations = async () => {
+        try {
+            const response = await fetch('/api/consultations');
+            if (response.ok) {
+                const data = await response.json();
+                const formattedData = data.map(consultation => ({
+                    id: consultation.id, // Use the id field from the API
+                    date: consultation.consultationDetails.date,
+                    nomPatient: consultation.patientName.split(' ')[0] || '', // Ensure default values
+                    prenomPatient: consultation.patientName.split(' ')[1] || '', // Ensure default values
+                    diagnostic: consultation.consultationDetails.diagnosis,
+                    notes: consultation.consultationDetails.notes,
+                    medication: consultation.prescriptions.map(p => p.medication).join(', '), // Combine medications if multiple
+                    instructions: consultation.prescriptions.map(p => p.instructions).join(', ') // Combine instructions if multiple
+                }));
+                setConsultations(formattedData);
+                console.log("Consultations fetched:", formattedData);
+            } else {
+                console.error("Failed to fetch consultations:", response.statusText);
+            }
+        } catch (error) {
+            console.error("Failed to fetch consultations:", error);
+        }
+    };
 
     const openNew = () => {
-        setDiagnosis(emptyDiagnosis);
+        setConsultation(emptyConsultation);
         setSubmitted(false);
-        setDiagnosisDialog(true);
+        setConsultationDialog(true);
     };
 
     const hideDialog = () => {
         setSubmitted(false);
-        setDiagnosisDialog(false);
+        setConsultationDialog(false);
     };
 
-    const hideDeleteDiagnosisDialog = () => {
-        setDeleteDiagnosisDialog(false);
+    const hideDeleteConsultationDialog = () => {
+        setDeleteConsultationDialog(false);
     };
 
-    const saveDiagnosis = () => {
+    const hideDeleteConsultationsDialog = () => {
+        setDeleteConsultationsDialog(false);
+    };
+
+    const saveConsultation = async () => {
         setSubmitted(true);
 
-        if (diagnosis.patientName.trim()) {
-            let _diagnoses = [...diagnoses];
-            let _diagnosis = { ...diagnosis };
+        try {
+            consultationSchema.parse(consultation); // Validate with zod
+            setValidationErrors({}); // Clear previous validation errors
+            
+            const response = consultation.id
+                ? await fetch(`/api/consultations?consultationId=${consultation.id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({nom: consultation.nomPatient,
+                        prenom: consultation.prenomPatient,
+                        date: consultation.date,
+                        diagnosis: consultation.diagnostic,
+                        notes: consultation.notes,
+                        medication: consultation.medication,
+                        instructions: consultation.instructions,})
+                })
+                : await fetch('/api/consultations', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        nom: consultation.nomPatient,
+                        prenom: consultation.prenomPatient,
+                        date: consultation.date,
+                        diagnostic: consultation.diagnostic,
+                        notes: consultation.notes,
+                        medication: consultation.medication,
+                        instructions: consultation.instructions,
+                      })
+                });
 
-            if (diagnosis.id) {
-                DiagnosisService.updateDiagnosis(_diagnosis).then(() => {
-                    const index = findIndexById(diagnosis.id);
-                    _diagnoses[index] = _diagnosis;
-                    toast.current.show({ severity: 'success', summary: 'Successful', detail: 'Diagnosis Updated', life: 3000 });
-                });
-            } else {
-                DiagnosisService.createDiagnosis(_diagnosis).then((data) => {
-                    _diagnoses.push(data);
-                    toast.current.show({ severity: 'success', summary: 'Successful', detail: 'Diagnosis Created', life: 3000 });
-                });
+            if (!response.ok) {
+                throw new Error('Failed to save consultation');
             }
 
-            setDiagnoses(_diagnoses);
-            setDiagnosisDialog(false);
-            setDiagnosis(emptyDiagnosis);
+            const savedConsultation = await response.json();
+            let _consultations = [...consultations];
+            if (consultation.id) {
+                const index = findIndexById(consultation.id);
+                if (index >= 0) {
+                    _consultations[index] = savedConsultation;
+                    toast.current.show({ severity: "success", summary: "Successful", detail: "Consultation Updated", life: 3000 });
+                } else {
+                    throw new Error('Consultation not found in local state');
+                }
+            } else {
+                _consultations.push(savedConsultation);
+                toast.current.show({ severity: "success", summary: "Successful", detail: "Consultation Created", life: 3000 });
+            }
+
+            setConsultations(_consultations);
+            setConsultationDialog(false);
+            setConsultation(emptyConsultation);
+        } catch (error) {
+            if (error instanceof z.ZodError) {
+                setValidationErrors(error.format());
+            } else {
+                console.error("Failed to save consultation:", error);
+                toast.current.show({ severity: "error", summary: "Error", detail: "patient n existe pas", life: 3000 });
+            }
         }
     };
 
-    const editDiagnosis = (diagnosis) => {
-        setDiagnosis({ ...diagnosis });
-        setDiagnosisDialog(true);
+    const editConsultation = (consultation) => {
+        setConsultation({ ...consultation });
+        setConsultationDialog(true);
     };
 
-    const confirmDeleteDiagnosis = (diagnosis) => {
-        setDiagnosis(diagnosis);
-        setDeleteDiagnosisDialog(true);
+    const confirmDeleteConsultation = (consultation) => {
+        setConsultation(consultation);
+        setDeleteConsultationDialog(true);
     };
 
-    const deleteDiagnosis = () => {
-        DiagnosisService.deleteDiagnosis(diagnosis.id).then(() => {
-            let _diagnoses = diagnoses.filter((val) => val.id !== diagnosis.id);
-            setDiagnoses(_diagnoses);
-            setDeleteDiagnosisDialog(false);
-            setDiagnosis(emptyDiagnosis);
-            toast.current.show({ severity: 'success', summary: 'Successful', detail: 'Diagnosis Deleted', life: 3000 });
-        });
+    const deleteConsultation = async () => {
+        try {
+            await fetch(`/api/consultations?consultationId=${consultation.id}`, { method: 'DELETE' });
+
+            const updatedConsultations = consultations.filter((val) => val.id !== consultation.id);
+            setConsultations(updatedConsultations);
+            setDeleteConsultationDialog(false);
+            setConsultation(emptyConsultation);
+            toast.current.show({ severity: "success", summary: "Successful", detail: "Consultation Deleted", life: 3000 });
+        } catch (error) {
+            console.error("Failed to delete consultation:", error);
+        }
     };
 
     const findIndexById = (id) => {
-        let index = -1;
-        for (let i = 0; i < diagnoses.length; i++) {
-            if (diagnoses[i].id === id) {
-                index = i;
-                break;
-            }
-        }
-        return index;
-    };
-
-    const header = (
-        <div className="flex flex-wrap gap-2 align-items-center justify-content-between">
-            <h4 className="m-0">Manage Diagnoses</h4>
-            <div className="p-input-icon-left">
-                <i className="pi pi-search" />
-                <InputText type="search" onInput={(e) => setGlobalFilter(e.target.value)} placeholder="Search..." />
-            </div>
-        </div>
-    );
-
-    const leftToolbarTemplate = () => {
-        return (
-            <div className="flex flex-wrap gap-2">
-                <Button label="New" icon="pi pi-plus" severity="success" onClick={openNew} />
-            </div>
-        );
-    };
-
-    const rightToolbarTemplate = () => {
-        return (
-            <Button label="Export" icon="pi pi-upload" className="p-button-help" onClick={exportCSV} />
-        );
+        return consultations.findIndex(consultation => consultation.id === id);
     };
 
     const exportCSV = () => {
         dt.current.exportCSV();
     };
 
+    const confirmDeleteSelected = () => {
+        setDeleteConsultationsDialog(true);
+    };
+
+    const deleteSelectedConsultations = async () => {
+        const deletePromises = selectedConsultations.map((consultation) =>
+            fetch(`/api/consultations?id=${consultation.id}`, { method: 'DELETE' })
+        );
+
+        try {
+            await Promise.all(deletePromises);
+
+            let _consultations = consultations.filter((val) => !selectedConsultations.includes(val));
+            setConsultations(_consultations);
+            setDeleteConsultationsDialog(false);
+            setSelectedConsultations([]);
+            toast.current.show({ severity: "success", summary: "Successful", detail: "Consultations Deleted", life: 3000 });
+        } catch (error) {
+            console.error("Failed to delete consultations:", error);
+            toast.current.show({ severity: "error", summary: "Error", detail: "Failed to delete consultations", life: 3000 });
+        }
+    };
+
+    const onInputChange = (e, name) => {
+        const val = (e.target && e.target.value) || "";
+        setConsultation(prev => ({ ...prev, [name]: val }));
+    };
+
+    const leftToolbarTemplate = () => {
+        return (
+            <div className="flex flex-wrap gap-2">
+                <Button label="New" icon="pi pi-plus" severity="success" onClick={openNew} />
+                <Button label="Delete" icon="pi pi-trash" severity="danger" onClick={confirmDeleteSelected} disabled={!selectedConsultations.length} />
+            </div>
+        );
+    };
+
+    const rightToolbarTemplate = () => {
+        return <Button label="Export" icon="pi pi-upload" className="p-button-help" onClick={exportCSV} />;
+    };
+
     const actionBodyTemplate = (rowData) => {
         return (
             <React.Fragment>
-                <Button icon="pi pi-pencil" className="p-button-rounded p-button-text mr-2" onClick={() => editDiagnosis(rowData)} />
-                <Button icon="pi pi-trash" className="p-button-rounded p-button-text" onClick={() => confirmDeleteDiagnosis(rowData)} />
-                <Button icon="pi pi-paperclip" className="p-button-rounded p-button-text" onClick={() => attachFile(rowData)} />
+                <Button icon="pi pi-pencil" rounded outlined className="mr-2" onClick={() => editConsultation(rowData)} />
+                <Button icon="pi pi-trash" rounded outlined severity="danger" onClick={() => confirmDeleteConsultation(rowData)} />
             </React.Fragment>
         );
     };
 
-    const diagnosisDialogFooter = (
-        <React.Fragment>
-            <Button label="Cancel" icon="pi pi-times" onClick={hideDialog} />
-            <Button label="Save" icon="pi pi-check" onClick={saveDiagnosis} />
-        </React.Fragment>
+    const header = (
+        <div className="flex flex-wrap gap-2 align-items-center justify-content-between">
+            <h4 className="m-0">Consultations</h4>
+            <span className="p-input-icon-right">
+                <i className="pi pi-search" />
+                <InputText type="search" onInput={(e) => setGlobalFilter(e.target.value)} placeholder="Search..." />
+            </span>
+        </div>
     );
-
-    const deleteDiagnosisDialogFooter = (
-        <React.Fragment>
-            <Button label="No" icon="pi pi-times" onClick={hideDeleteDiagnosisDialog} />
-            <Button label="Yes" icon="pi pi-check" severity="danger" onClick={deleteDiagnosis} />
-        </React.Fragment>
-    );
-
-    const attachFile = (diagnosis) => {
-        // Implement the logic to attach files to the diagnosis
-        toast.current.show({ severity: 'success', summary: 'Successful', detail: 'File Attached', life: 3000 });
-    };
 
     return (
-        <div>
+        <div className="datatable-crud-demo">
             <Toast ref={toast} />
             <div className="card">
-                <Toolbar className="mb-4" left={leftToolbarTemplate} right={rightToolbarTemplate}></Toolbar>
-
-                <DataTable ref={dt} value={diagnoses} dataKey="id" paginator rows={10} rowsPerPageOptions={[5, 10, 25]}
-                    paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
-                    currentPageReportTemplate="Showing {first} to {last} of {totalRecords} diagnoses" globalFilter={globalFilter} header={header}>
-                    <Column field="patientName" header="Patient Name" sortable style={{ minWidth: '16rem' }}></Column>
-                    <Column field="date" header="Date" sortable style={{ minWidth: '12rem' }}></Column>
-                    <Column field="diagnosis" header="Diagnosis" sortable style={{ minWidth: '20rem' }}></Column>
-                    <Column field="notes" header="Notes" sortable style={{ minWidth: '20rem' }}></Column>
-                    <Column body={actionBodyTemplate} exportable={false} style={{ minWidth: '12rem' }}></Column>
+                <Toolbar className="mb-4" left={leftToolbarTemplate} right={rightToolbarTemplate} />
+                <DataTable
+                    ref={dt}
+                    value={consultations}
+                    selection={selectedConsultations}
+                    onSelectionChange={(e) => setSelectedConsultations(e.value)}
+                    dataKey="id"
+                    paginator
+                    rows={10}
+                    rowsPerPageOptions={[5, 10, 25]}
+                    className="datatable-responsive"
+                    globalFilter={globalFilter}
+                    header={header}
+                >
+                    <Column selectionMode="multiple" headerStyle={{ width: '3rem' }}></Column>
+                    <Column field="nomPatient" header="Nom Patient" sortable />
+                    <Column field="prenomPatient" header="Prenom Patient" sortable />
+                    <Column field="date" header="Date" sortable />
+                    <Column field="diagnostic" header="Diagnostic" sortable />
+                    <Column field="notes" header="Notes" sortable />
+                    <Column field="medication" header="Medication" sortable />
+                    <Column field="instructions" header="Instructions" sortable />
+                    <Column body={actionBodyTemplate} headerStyle={{ width: '8rem' }} />
                 </DataTable>
             </div>
-
-            <Dialog visible={diagnosisDialog} style={{ width: '500px' }} header="Diagnosis Details" modal className="p-fluid" footer={diagnosisDialogFooter} onHide={hideDialog}>
-                <div className="field">
-                    <label htmlFor="patientName" className="font-bold">Patient Name</label>
-                    <InputText id="patientName" value={diagnosis.patientName} onChange={(e) => setDiagnosis({ ...diagnosis, patientName: e.target.value })} required autoFocus className={classNames({ 'p-invalid': submitted && !diagnosis.patientName })} />
-                    {submitted && !diagnosis.patientName && <small className="p-error">Patient Name is required.</small>}
+            <Dialog
+      visible={consultationDialog}
+      style={{ width: '450px' }}
+      header="Consultation Details"
+      modal
+      className="p-fluid"
+      footer={
+        <div>
+          <Button label="Cancel" icon="pi pi-times" className="p-button-text" onClick={hideDialog} />
+          <Button label="Save" icon="pi pi-check" onClick={saveConsultation} />
+        </div>
+      }
+      onHide={hideDialog}
+    >
+      <div className="field">
+        <label htmlFor="nomPatient">Nom Patient</label>
+        <InputText
+          id="nomPatient"
+          type="text"
+          value={consultation.nomPatient}
+          onChange={(e) => onInputChange(e, 'nomPatient')}
+          className={classNames({ 'p-invalid': validationErrors.nomPatient })}
+        />
+        {validationErrors.nomPatient && <small className="p-error">{validationErrors.nomPatient}</small>}
+      </div>
+      <div className="field">
+        <label htmlFor="prenomPatient">Prenom Patient</label>
+        <InputText
+          id="prenomPatient"
+          type="text"
+          value={consultation.prenomPatient}
+          onChange={(e) => onInputChange(e, 'prenomPatient')}
+          className={classNames({ 'p-invalid': validationErrors.prenomPatient })}
+        />
+        {validationErrors.prenomPatient && <small className="p-error">{validationErrors.prenomPatient}</small>}
+      </div>
+      <div className="field">
+        <label htmlFor="date">Date</label>
+        <InputText
+          id="date"
+          type="text"
+          value={consultation.date}
+          onChange={(e) => onInputChange(e, 'date')}
+          className={classNames({ 'p-invalid': validationErrors.date })}
+        />
+        {validationErrors.date && <small className="p-error">{validationErrors.date}</small>}
+      </div>
+      <div className="field">
+        <label htmlFor="diagnostic">Diagnostic</label>
+        <InputTextarea
+          id="diagnostic"
+          value={consultation.diagnostic}
+          onChange={(e) => onInputChange(e, 'diagnostic')}
+          rows={3}
+        />
+      </div>
+      <div className="field">
+        <label htmlFor="notes">Notes</label>
+        <InputTextarea
+          id="notes"
+          value={consultation.notes}
+          onChange={(e) => onInputChange(e, 'notes')}
+          rows={3}
+        />
+      </div>
+      <div className="field">
+        <label htmlFor="medication">Medication</label>
+        <InputTextarea
+          id="medication"
+          value={consultation.medication}
+          onChange={(e) => onInputChange(e, 'medication')}
+          rows={3}
+        />
+      </div>
+      <div className="field">
+        <label htmlFor="instructions">Instructions</label>
+        <InputTextarea
+          id="instructions"
+          value={consultation.instructions}
+          onChange={(e) => onInputChange(e, 'instructions')}
+          rows={3}
+        />
+      </div>
+    </Dialog>
+            <Dialog visible={deleteConsultationDialog} style={{ width: '450px' }} header="Confirm" modal footer={
+                <div>
+                    <Button label="No" icon="pi pi-times" className="p-button-text" onClick={hideDeleteConsultationDialog} />
+                    <Button label="Yes" icon="pi pi-check" severity="danger" onClick={deleteConsultation} />
                 </div>
-                <div className="field">
-                    <label htmlFor="date" className="font-bold">Date</label>
-                    <InputText id="date" type="date" value={diagnosis.date} onChange={(e) => setDiagnosis({ ...diagnosis, date: e.target.value })} required className={classNames({ 'p-invalid': submitted && !diagnosis.date })} />
-                    {submitted && !diagnosis.date && <small className="p-error">Date is required.</small>}
-                </div>
-                <div className="field">
-                    <label htmlFor="diagnosis" className="font-bold">Diagnosis</label>
-                    <InputText id="diagnosis" value={diagnosis.diagnosis} onChange={(e) => setDiagnosis({ ...diagnosis, diagnosis: e.target.value })} required className={classNames({ 'p-invalid': submitted && !diagnosis.diagnosis })} />
-                    {submitted && !diagnosis.diagnosis && <small className="p-error">Diagnosis is required.</small>}
-                </div>
-                <div className="field">
-                    <label htmlFor="notes" className="font-bold">Notes</label>
-                    <InputText id="notes" value={diagnosis.notes} onChange={(e) => setDiagnosis({ ...diagnosis, notes: e.target.value })} required className={classNames({ 'p-invalid': submitted && !diagnosis.notes })} />
-                    {submitted && !diagnosis.notes && <small className="p-error">Notes are required.</small>}
-                </div>
+            } onHide={hideDeleteConsultationDialog}>
+                <p>Are you sure you want to delete this consultation?</p>
             </Dialog>
-
-            <Dialog visible={deleteDiagnosisDialog} style={{ width: '450px' }} header="Confirm" modal footer={deleteDiagnosisDialogFooter} onHide={hideDeleteDiagnosisDialog}>
-                <div className="confirmation-content">
-                    <i className="pi pi-exclamation-triangle mr-3" style={{ fontSize: '2rem' }} />
-                    {diagnosis && <span>Are you sure you want to delete <b>{diagnosis.patientName}</b>?</span>}
+            <Dialog visible={deleteConsultationsDialog} style={{ width: '450px' }} header="Confirm" modal footer={
+                <div>
+                    <Button label="No" icon="pi pi-times" className="p-button-text" onClick={hideDeleteConsultationsDialog} />
+                    <Button label="Yes" icon="pi pi-check" severity="danger" onClick={deleteSelectedConsultations} />
                 </div>
+            } onHide={hideDeleteConsultationsDialog}>
+                <p>Are you sure you want to delete the selected consultations?</p>
             </Dialog>
         </div>
     );

@@ -40,6 +40,7 @@ const config: Config = {
         whiten: "#F1F5F9",
         whiter: "#F5F7FD",
         boxdark: "#24303F",
+        dk:"#1C2434",
         "boxdark-2": "#1A222C",
         strokedark: "#2E3A47",
         "form-strokedark": "#3d4d60",
@@ -159,6 +160,9 @@ const config: Config = {
         203: "50.75rem",
         230: "57.5rem",
         242.5: "60.625rem",
+        300: "90.625rem",
+        400: "120.625rem",
+        500: "150.625rem",
       },
       maxWidth: {
         2.5: "0.625rem",

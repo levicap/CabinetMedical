@@ -1,19 +1,10 @@
-@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@200;300;400;500;600;700;800&display=swap");
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
 
-body,
-input {
-  font-family: "Poppins", sans-serif;
-}
+
 
 .container {
   position: relative;
-  width: 100%;
+  min-width: 100%;
   background-color: #fff;
   min-height: 100vh;
   overflow: hidden;
@@ -33,7 +24,7 @@ input {
   transform: translate(-50%, -50%);
   left: 75%;
   width: 50%;
-  transition: 1s 0.7s ease-in-out;
+  transition: all 0.7s ease-in-out;
   display: grid;
   grid-template-columns: 1fr;
   z-index: 5;

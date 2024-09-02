@@ -1,5 +1,8 @@
 import DefaultLayout from "@/components/Layouts/DefaultLayout";
 import DoctorScheduler from "@/components/schedule/schedule";
+import { auth } from "@/auth";
+import { redirect } from "next/navigation";
+
 function Planifier(){
     return (
         <DefaultLayout>

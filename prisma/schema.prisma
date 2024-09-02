@@ -1,0 +1,191 @@
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+ 
+generator client {
+  provider = "prisma-client-js"
+}
+
+ 
+model User {
+  id            String          @id @default(auto()) @map("_id") @db.ObjectId
+  name          String?
+  email         String?         @unique
+  emailVerified DateTime?
+  image         String?
+  accounts      Account[]
+  sessions      Session[]
+  // Optional for WebAuthn support
+  Authenticator Authenticator[]
+    role          String?      
+    password          String?
+    username          String?
+     patient       patient?
+
+
+ 
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+ 
+model Account {
+  id                String  @id @default(auto()) @map("_id") @db.ObjectId
+  userId            String  @db.ObjectId
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.String
+  access_token      String? @db.String
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.String
+  session_state     String?
+
+ 
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+ 
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+ 
+  @@unique([provider, providerAccountId])
+}
+ 
+model Session {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  sessionToken String   @unique
+  userId       String   @db.ObjectId
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+ 
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+ 
+model VerificationToken {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  identifier String
+  token      String
+  expires    DateTime
+ 
+  @@unique([identifier, token])
+}
+ 
+// Optional for WebAuthn support
+model Authenticator {
+  credentialID         String  @id @map("_id")
+  userId               String  @db.ObjectId
+  providerAccountId    String
+  credentialPublicKey  String
+  counter              Int
+  credentialDeviceType String
+  credentialBackedUp   Boolean
+  transports           String?
+ 
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+ 
+  @@unique([userId, credentialID])
+}
+model Medecin {
+  id            String          @id @default(auto()) @map("_id") @db.ObjectId
+  nom           String
+  prenom        String
+  specialite    String
+  email         String   @unique
+  telephone     String
+}
+model Personel {
+  id          String @id @default(auto()) @map("_id") @db.ObjectId
+  nom         String
+  prenom      String
+  adresse     String
+  telephone   String
+}
+model patient {
+  id            String          @id @default(auto()) @map("_id") @db.ObjectId
+  nom           String
+  prenom        String
+  adresse       String
+  email         String          @unique
+  telephone     String
+  rendezvous    rendezvous[]    
+  prescriptions Prescription[]
+  diagnosis     Diagnosis[]  
+  consultations consultation[]  // Relation to consultations
+  dossirs       dossier[]        // Relation to dossirs
+  userId        String         @unique // Make it unique
+  user          User     @relation(fields: [userId], references: [id])
+}
+model Diagnosis {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  doctorName  String
+  date        String
+  diagnosis   String
+  notes       String
+  patientId     String   @db.ObjectId
+  patient       patient  @relation(fields: [patientId], references: [id],onDelete: Cascade)
+  consultation consultation[]
+
+}
+
+
+
+model dossier {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  diagnostic    String
+  notes         String?
+  files         String[] // Array to store multiple file paths or URLs
+  patientId     String   @db.ObjectId
+  patient       patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  consultation  consultation[]  // Relation to consultations
+}
+
+model rendezvous {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  date          String
+  time          String
+  nomPatient    String
+  prenomPatient String
+  etat          String
+  patientId     String   
+  patient       patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+}
+
+
+model consultation {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  nom         String
+  prenom      String
+  date        String
+  diagnosis   String
+  notes       String?
+  patientId   String   @db.ObjectId
+  patient     patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  dossirId    String   @db.ObjectId
+  dossir      dossier   @relation(fields: [dossirId], references: [id], onDelete: Cascade)
+  diagnosisId String   @db.ObjectId
+  diagnostic  Diagnosis @relation(fields: [diagnosisId], references: [id], onDelete: Cascade)
+    prescriptions Prescription[] @relation("ConsultationPrescriptions")
+
+}
+
+model Prescription {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  doctorName    String
+  date          String
+  medication    String
+  instructions  String
+  patientId     String   @db.ObjectId
+  patient       patient  @relation(fields: [patientId], references: [id],onDelete: Cascade)
+  consultationId String       @db.ObjectId
+  consultation   consultation @relation("ConsultationPrescriptions", fields: [consultationId], references: [id], onDelete: Cascade)
+}
+model Event {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  title     String
+  start     DateTime
+  end       DateTime
+  doctor    String
+}
+

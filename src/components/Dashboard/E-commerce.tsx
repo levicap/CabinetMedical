@@ -3,6 +3,9 @@ import dynamic from "next/dynamic";
 import React from "react";
 import ChartOne from "../Charts/ChartOne";
 import ChartTwo from "../Charts/ChartTwo";
+import { useEffect, useState } from 'react';
+import ChartLayout from "../Charts/chartlayout";
+
 
 import CardDataStats from "../CardDataStats";
 import Generate from "../generation/generate"
@@ -13,29 +16,44 @@ const ChartThree = dynamic(() => import("@/components/Charts/ChartThree"), {
 });
 
 const ECommerce: React.FC = () => {
+  const [data, setData] = useState({
+    totalViews: "0",
+    totalConsultations: "0",
+    totalPatients: "0",
+    totalMedecin: "0",
+    totalPersonnel: "0",
+    totalrendezvous:"0",
+    totalDossier:"0"
+  });
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const response = await fetch("/api/analytics");
+        const result = await response.json();
+
+        setData({
+          totalViews: result.totalViews || "0",
+          totalConsultations: result.totalConsultations*70 || "0",
+          totalPatients: result.totalPatients || "0",
+          totalMedecin: result.totalMedecin || "0",
+          totalPersonnel: result.totalPersonnel || "0",
+           totalrendezvous: result.totalrendezvous || "0",
+          totalDossier: result.totalDossier || "0"
+        });
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      }
+    }
+
+    fetchData();
+  }, []);
+  
   return (
     <>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6 xl:grid-cols-4 2xl:gap-7.5">
-        <CardDataStats title="Total views" total="6K" rate="0.43%" levelUp>
-          <svg
-            className="fill-primary dark:fill-white"
-            width="22"
-            height="16"
-            viewBox="0 0 22 16"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M11 15.1156C4.19376 15.1156 0.825012 8.61876 0.687512 8.34376C0.584387 8.13751 0.584387 7.86251 0.687512 7.65626C0.825012 7.38126 4.19376 0.918762 11 0.918762C17.8063 0.918762 21.175 7.38126 21.3125 7.65626C21.4156 7.86251 21.4156 8.13751 21.3125 8.34376C21.175 8.61876 17.8063 15.1156 11 15.1156ZM2.26876 8.00001C3.02501 9.27189 5.98126 13.5688 11 13.5688C16.0188 13.5688 18.975 9.27189 19.7313 8.00001C18.975 6.72814 16.0188 2.43126 11 2.43126C5.98126 2.43126 3.02501 6.72814 2.26876 8.00001Z"
-              fill=""
-            />
-            <path
-              d="M11 10.9219C9.38438 10.9219 8.07812 9.61562 8.07812 8C8.07812 6.38438 9.38438 5.07812 11 5.07812C12.6156 5.07812 13.9219 6.38438 13.9219 8C13.9219 9.61562 12.6156 10.9219 11 10.9219ZM11 6.625C10.2437 6.625 9.625 7.24375 9.625 8C9.625 8.75625 10.2437 9.375 11 9.375C11.7563 9.375 12.375 8.75625 12.375 8C12.375 7.24375 11.7563 6.625 11 6.625Z"
-              fill=""
-            />
-          </svg>
-        </CardDataStats>
-        <CardDataStats title="Total Consultation" total="$45,2K" rate="4.35%" levelUp>
+       
+        <CardDataStats title="Total Consultation" total={data.totalConsultations+"dt"} rate="4.35%" levelUp>
         
           <svg
             className="fill-primary dark:fill-white"
@@ -55,7 +73,7 @@ const ECommerce: React.FC = () => {
             />
           </svg>
         </CardDataStats>
-        <CardDataStats title="Total Patients" total="346" rate="0.95%" levelDown>
+        <CardDataStats title="Total Patients" total={data.totalPatients} rate="0.95%" levelDown>
           
           
      
@@ -81,7 +99,7 @@ const ECommerce: React.FC = () => {
             />
           </svg>
         </CardDataStats>
-        <CardDataStats title="Total Medicins" total="10" rate="0.95%" levelDown>
+        <CardDataStats title="Total Medicins" total={data.totalMedecin} rate="0.95%" levelDown>
           
           
      
@@ -107,7 +125,7 @@ const ECommerce: React.FC = () => {
             />
           </svg>
         </CardDataStats>
-        <CardDataStats title="Total personel " total="12" rate="0.95%" levelDown>
+        <CardDataStats title="Total personel " total={data.totalPersonnel} rate="0.95%" levelDown>
           
           
      
@@ -133,14 +151,14 @@ const ECommerce: React.FC = () => {
             />
           </svg>
         </CardDataStats>
-        <CardDataStats title="Total Dossier medical " total="200" rate="0.95%" levelDown>
+        <CardDataStats title="Total Dossier medical " total={data.totalDossier} rate="0.95%" levelDown>
           
           
      
         <svg className="fill-primary dark:fill-white" width="22"
             height="18"xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M0 96C0 60.7 28.7 32 64 32l132.1 0c19.1 0 37.4 7.6 50.9 21.1L289.9 96 448 96c35.3 0 64 28.7 64 64l0 256c0 35.3-28.7 64-64 64L64 480c-35.3 0-64-28.7-64-64L0 96zM64 80c-8.8 0-16 7.2-16 16l0 320c0 8.8 7.2 16 16 16l384 0c8.8 0 16-7.2 16-16l0-256c0-8.8-7.2-16-16-16l-161.4 0c-10.6 0-20.8-4.2-28.3-11.7L213.1 87c-4.5-4.5-10.6-7-17-7L64 80z"/></svg>
         </CardDataStats>
-        <CardDataStats title="Total Rendez vous " total="18" rate="0.95%" levelUp>
+        <CardDataStats title="Total Rendez vous " total={data.totalrendezvous} rate="0.95%" levelUp>
           
           
      
@@ -149,9 +167,13 @@ const ECommerce: React.FC = () => {
       </div>
 
       <div className="mt-4 grid grid-cols-12 gap-4 md:mt-6 md:gap-6 2xl:mt-7.5 2xl:gap-7.5">
-        <ChartOne />
+        <ChartLayout />
+       
         <ChartTwo />
-        <ChartThree />
+       
+        
+        
+        
         <Generate/>
         
         
